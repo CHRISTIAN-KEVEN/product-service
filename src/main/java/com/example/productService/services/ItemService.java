@@ -10,4 +10,6 @@ public interface ItemService {
     String createItem(ItemRequestDto request);
 
     String getItem(Long itemId);
+
+    String updateItemStock(String request);
 }

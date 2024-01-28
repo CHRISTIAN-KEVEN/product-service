@@ -6,7 +6,9 @@ import com.example.productService.models.TItem;
 import com.example.productService.repositories.ItemRepository;
 import com.example.productService.services.ItemService;
 import com.example.productService.utilities.Utilities;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.log4j.Log4j2;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,10 +23,13 @@ import java.util.stream.Collectors;
 @Log4j2
 public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepo;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public ItemServiceImpl(ItemRepository itemRepo) {
+    public ItemServiceImpl(ItemRepository itemRepo,
+                           ObjectMapper objectMapper) {
         this.itemRepo = itemRepo;
+        this.objectMapper = objectMapper;
     }
 
     public String listItems(int page, int size) {
@@ -53,13 +58,46 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public String getItem(Long itemId) {
 
-        Optional<TItem> optItem = itemRepo.findById(itemId);
-        if(optItem.isEmpty()) {
-            log.info("No item with ID {} found !", itemId);
-            return Utilities.errorMessageReturn("No item with ID " + itemId + " found !");
-        }
+        try {
+            Optional<TItem> optItem = itemRepo.findById(itemId);
+            if(optItem.isEmpty()) {
+                log.info("No item with ID {} found !", itemId);
+                return Utilities.errorMessageReturn("No item with ID " + itemId + " found !");
+            }
 
-        return Utilities.dataReturn(buildItemResponseObject(optItem.get()));
+            return Utilities.dataReturn(objectMapper.writeValueAsString(buildItemResponseObject(optItem.get())));
+        } catch (Exception ex) {
+            log.error("Failed to get item details ", ex);
+            return Utilities.errorMessageReturn("Failed to get item details");
+        }
+    }
+
+    @Override
+    public String updateItemStock(String request) {
+
+        try {
+            log.info("Updating item {}'s stock by ");
+            JSONObject requestPayload = new JSONObject(request);
+            long itemId = requestPayload.getLong("itemId");
+            int qtyToUpdateBy = requestPayload.getInt("qtyToUpdateBy");
+            log.info("Updating item {}'s stock by ", qtyToUpdateBy);
+
+            Optional<TItem> optItem = itemRepo.findById(itemId);
+            if(optItem.isEmpty()) {
+                log.info("Item with ID {} not found ! ", itemId);
+                return Utilities.errorMessageReturn("Item with ID " + itemId + " not found ! ");
+            }
+            TItem tItem = optItem.get();
+            int newQty = tItem.getQuantity() + qtyToUpdateBy;
+            tItem.setQuantity(newQty < 0 ? 0 : newQty);
+            itemRepo.save(tItem);
+            log.info("Item quantity updated successfully !");
+            return Utilities.successMessageReturn("Item quantity updated successfully !");
+
+        }catch (Exception ex) {
+            log.error("Failed to update item {}'s stock", ex);
+            return Utilities.errorMessageReturn("Failed to update item {}'s stock");
+        }
     }
 
 

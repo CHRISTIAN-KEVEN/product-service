@@ -38,4 +38,8 @@ public class ItemController {
     public ResponseEntity<String> createItem(@RequestBody ItemRequestDto request) {
         return new ResponseEntity<>(itemService.createItem(request), HttpStatus.CREATED);
     }
+    @PostMapping("update-item-stock")
+    public ResponseEntity<String> updateItemStock(@RequestBody String request) {
+        return new ResponseEntity<>(itemService.updateItemStock(request), HttpStatus.CREATED);
+    }
 }
